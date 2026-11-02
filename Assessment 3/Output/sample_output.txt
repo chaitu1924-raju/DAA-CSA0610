@@ -1,0 +1,12 @@
+MODULE 1 - Stable Merge Sort
+Sorted orders: [(101, 'O4'), (102, 'O2'), (102, 'O5'), (103, 'O6'), (105, 'O1'), (105, 'O3')]
+
+MODULE 2 - Quick Sort
+Sorted seller scores: [8, 17, 29, 42, 55, 63]
+
+MODULE 3 - First-match Binary Search
+First order at timestamp 102: (102, 'O2')
+Timestamp 999: None
+
+MODULE 4 - Strassen Matrix Multiplication
+A x B = [[50, 38], [38, 34]]
