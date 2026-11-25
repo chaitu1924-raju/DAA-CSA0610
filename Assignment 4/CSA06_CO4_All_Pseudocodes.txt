@@ -1,0 +1,35 @@
+CSA06 CO4 — CLOUD RELEASE BUDGET PLANNER: PSEUDOCODES
+
+GREEDY VALUE-PER-COST
+1. Sort feature indices by decreasing value[i]/cost[i].
+2. Set usedCost=0 and greedyValue=0.
+3. For each feature in sorted order, if usedCost+cost[i] <= W:
+   select it and add its cost and value.
+4. Return greedyValue.
+
+0/1 KNAPSACK DYNAMIC PROGRAMMING
+State: DP[i][w] is the maximum value using first i features at exact
+total cost w. Unreachable exact costs are INVALID.
+Base: DP[0][0]=0; DP[0][w>0]=INVALID.
+For each feature i and each w:
+  DP[i][w] = DP[i-1][w] (skip)
+  If w>=cost[i] and DP[i-1][w-cost[i]] is valid:
+      candidate=DP[i-1][w-cost[i]]+value[i]
+      If candidate is better, store it and mark TAKE[i][w]=TRUE.
+
+TIE BREAK AND RECONSTRUCTION
+1. Find the largest reachable DP[n][w] value.
+2. Choose the smallest w that achieves that value.
+3. Starting at i=n and w=chosen cost, follow TAKE decisions backwards.
+4. Subtract the cost when a feature is taken.
+5. Reverse selected indices to restore input order; print NONE if empty.
+
+RECURRENCE
+DP[i][w] = max(DP[i-1][w],
+               DP[i-1][w-cost[i]] + value[i]) when feasible.
+Time O(nW); space O(nW). Greedy sorting O(n log n).
+
+PSEUDO-POLYNOMIAL
+O(nW) is polynomial in the numeric value W, but W is represented using
+only O(log W) input bits. Therefore it is pseudo-polynomial, not
+polynomial in the bit-length of the input.
