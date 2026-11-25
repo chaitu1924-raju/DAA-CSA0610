@@ -1,0 +1,232 @@
+CSA06 – DESIGN AND ANALYSIS OF ALGORITHMS
+CO5 – CONSTRAINT-BASED PROBLEM SOLVING
+UNIVERSITY EXAMINATION TIMETABLING
+
+Student Name: J. Lokesh
+Registration Number: __________________
+
+A. PROBLEM DEFINITION
+
+Input:
+- Courses C = {C1,...,C8}, with enrolment sizes:
+  C1=120, C2=90, C3=110, C4=60, C5=150, C6=80, C7=40, C8=70.
+- Clash edges:
+  (C1,C2), (C1,C3), (C2,C3), (C1,C5), (C3,C5), (C2,C4),
+  (C4,C6), (C5,C6), (C6,C7), (C7,C8), (C3,C8), (C5,C8), (C1,C6).
+- Four slots S1, S2, S3, S4; two halls in every slot:
+  Hall A capacity 160 and Hall B capacity 120.
+
+Decision variables:
+For every course c, slot[c] is one of {S1,S2,S3,S4};
+room[c] is one of {A,B}.
+
+Hard constraints:
+H1: If (u,v) is a clash edge, slot[u] != slot[v].
+H2: capacity(room[c]) >= enrolment[c].
+H2 also requires no two exams to use the same hall in the same slot.
+H3: Every course is assigned exactly once.
+
+Soft constraint:
+Minimise the number of clash edges (u,v) for which day(slot[u]) = day(slot[v]).
+S1/S2 are Day 1; S3/S4 are Day 2.
+
+Decision version:
+Given a number K of slots and the halls/capacities, is there a valid assignment of every exam to one slot and one room satisfying H1–H3?
+
+Optimisation version:
+Find a valid timetable that minimises the same-day clash penalty; if required, first minimise the number of slots.
+
+Graph-colouring relationship:
+Courses are vertices and clash pairs are edges. Assigning a slot is colouring a vertex.
+Adjacent vertices must receive different colours. Room constraints add a capacity of two
+exams per slot and a compatible room assignment for each colour class.
+
+B. CONSTRAINT ANALYSIS AND PRIORITY
+
+Interaction:
+- A clash edge prevents two courses from sharing a slot, regardless of room.
+- Two non-clashing courses may share a slot only if they can be placed in distinct halls.
+- Hall A accepts all courses (maximum enrolment 150 <= 160).
+- Hall B accepts all courses except C5 (150 > 120).
+- Therefore, C5 must use Hall A. If another course shares its slot, that course must use Hall B.
+
+Quick necessary conditions:
+1. Eight exams and two halls per slot imply at most two exams per slot.
+   Three slots can hold at most 3*2=6 exams, so three slots are impossible.
+2. C1, C2 and C3 form a clique of size 3; they need three distinct slots.
+3. Every course fits Hall A; only C5 cannot fit Hall B.
+These tests are applied before recursive search.
+
+Search order:
+Use descending clash degree (most constrained first), then descending enrolment:
+C5, C1, C3, C6, C2, C8, C4, C7.
+This places the most restrictive/high-degree exams early and exposes conflicts sooner.
+
+Constraint checking order for each candidate:
+1. Check whether an already assigned neighbour occupies the candidate slot.
+2. Check whether fewer than two exams occupy that slot.
+3. Check whether the current pair can be allocated to different halls by capacity.
+4. Assign and recurse; if the branch fails, undo the assignment.
+
+C. COMPLETE BACKTRACKING PSEUDOCODE
+
+BACKTRACK(i):
+    if i = number_of_courses:
+        return SUCCESS
+
+    c = course_order[i]
+
+    for each slot s in {S1,S2,S3,S4}:
+        if any neighbour of c is already assigned to s:
+            reject s because of a clash
+            continue
+
+        if number_of_exams_in(s) = 2:
+            reject s because both halls are occupied
+            continue
+
+        if no distinct hall assignment satisfies capacities
+           for the exams already in s together with c:
+            reject s because of room capacity
+            continue
+
+        assign slot[c] = s
+        add c to exams_in_slot[s]
+
+        if BACKTRACK(i+1) = SUCCESS:
+            return SUCCESS
+
+        remove c from exams_in_slot[s]
+        unassign slot[c]             // undo and backtrack
+
+    return FAILURE
+
+ROOM-FEASIBLE(exam_list):
+    if size(exam_list) > 2:
+        return FALSE
+    if size(exam_list) <= 1:
+        return TRUE if at least one hall can hold the exam
+    let exam_list = [x,y]
+    return (students[x] <= 160 AND students[y] <= 120)
+           OR (students[y] <= 160 AND students[x] <= 120)
+
+After slots have been selected, assign rooms:
+- For a single exam, choose any hall with sufficient capacity.
+- For two exams, try (x in A, y in B); if that fails, try (y in A, x in B).
+- Reject the slot pair if neither arrangement works.
+
+D. TRACE AND RESULT FOR THE GIVEN DATA
+
+The program uses the order C5, C1, C3, C6, C2, C8, C4, C7.
+The executed trace is included in the companion All_Outputs.pdf.
+It records every selected slot, every rejected candidate and the reason.
+For this first feasible run, the choices are:
+C5->S1, C1->S2, C3->S3, C6->S3, C2->S1, C8->S2, C4->S4, C7->S4.
+The trace contains clash rejections and a full-slot rejection; no backtrack is
+needed on this first feasible branch.
+
+First feasible four-slot timetable:
+S1 Day 1 FN: Hall A C5 (150); Hall B C2 (90)
+S2 Day 1 AN: Hall A C1 (120); Hall B C8 (70)
+S3 Day 2 FN: Hall A C3 (110); Hall B C6 (80)
+S4 Day 2 AN: Hall A C4 (60); Hall B C7 (40)
+
+Three slots are impossible: only 6 hall positions are available (3 slots x 2 halls),
+but there are 8 examinations. This is a capacity proof independent of the clash graph.
+
+E. COMPLEXITY CLASSIFICATION
+
+Certificate:
+A proposed timetable lists one slot and one room for every course.
+
+Polynomial-time verification:
+- Check every course appears exactly once.
+- Check every clash edge has different endpoint slots.
+- Check each room has enough capacity.
+- Check no hall is used twice in the same slot.
+Each check is polynomial in the number of courses and clash edges; for this instance
+the checks are very small. Therefore the decision problem is in NP.
+
+NP-completeness:
+The generalised decision problem is NP-hard because graph k-colouring reduces to
+the slot-assignment part: create one course per graph vertex and one clash pair per
+graph edge; a valid assignment to k slots is exactly a proper k-colouring.
+Room capacities can be made non-binding in the reduction by providing sufficient
+room capacity. Since the problem is also in NP, the generalised decision problem is
+NP-complete. This classification concerns the general problem, not merely this
+single fixed eight-course instance.
+
+Optimisation version:
+Minimising the same-day clash penalty (and/or the number of slots) is NP-hard,
+because solving the optimisation problem sufficiently well would solve the
+corresponding decision feasibility problem. The optimisation task is not itself
+described as a yes/no NP-complete language.
+
+Search-space comparison:
+- Slot-only assignments: 4^8 = 65,536.
+- Room-only assignments: 2^8 = 256.
+- Naive combined upper bound: 8^8 = 16,777,216 slot-room pairs.
+These are loose unpruned upper bounds. The actual backtracking trace reports
+9 recursive nodes, 20 candidate attempts, 10 clash rejections, 2 room/slot
+rejections and 0 backtracks for the first feasible branch. The branch-and-bound
+optimisation run reports its own explored-node and bound-prune counts in the PDF.
+Counts depend on the stated ordering and implementation.
+
+F. BRANCH AND BOUND FOR THE SOFT CONSTRAINT
+
+Objective:
+Penalty = number of clash edges (u,v) whose endpoints are on the same day.
+A same-slot clash is always forbidden by H1; the penalty concerns different slots
+on the same day.
+
+BRANCH-AND-BOUND(i):
+    if lower_bound(current partial assignment) >= best_penalty:
+        prune this branch
+        return
+
+    if every course is assigned:
+        cost = count clash edges whose endpoints are on same day
+        if cost < best_penalty:
+            best_penalty = cost
+            best_timetable = current assignment
+        return
+
+    choose next course c using the constrained-first order
+    for each feasible slot s:
+        assign c to s
+        recurse to next course
+        undo c
+
+A safe lower bound is the number of same-day clash edges whose two endpoints
+have already been assigned. Future assignments cannot remove those penalties.
+The program uses this bound and exhaustively explores the remaining feasible
+branches, so the best recorded penalty is optimal for the given model.
+
+Best timetable found:
+S1 Day 1 FN: Hall A C5 (150); Hall B C4 (60)
+S2 Day 1 AN: Hall A C1 (120); Hall B C7 (40)
+S3 Day 2 FN: Hall A C3 (110); Hall B C6 (80)
+S4 Day 2 AN: Hall A C2 (90); Hall B C8 (70)
+Same-day clash penalty = 3.
+The program verifies that all hard constraints hold and reports the exact
+search-node and pruning counts in All_Outputs.pdf.
+
+G. SCALING TO 300 COURSES
+
+For 300 courses, exact backtracking may explore an exponential number of
+assignments. Practical design:
+1. Build the clash graph and enrolment list from registration data.
+2. Apply necessary capacity and clique/lower-bound checks before search.
+3. Use DSATUR or largest-degree-first ordering; break ties by enrolment.
+4. Use constraint propagation/forward checking after every assignment.
+5. Use branch-and-bound with a strong lower bound for the soft penalty.
+6. Decompose independent components where possible.
+7. Use local search, tabu search, simulated annealing or integer programming
+   for large instances; retain hard-constraint validation.
+8. Produce a timetable, then run an independent verifier and report any
+   infeasibility or soft-constraint penalty.
+For 300 courses, a hybrid heuristic/constraint solver is generally more practical
+than exhaustive exact search. Exact search can be retained for small components
+or as a benchmark.
+
+END OF PSEUDOCODE AND DESIGN ANSWERS

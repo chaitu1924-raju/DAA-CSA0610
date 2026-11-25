@@ -1,0 +1,78 @@
+CSA06 CO5 – Examination Timetabling
+Courses: 8 | slots: 4 | halls per slot: 2
+Clash edges: 13 | search order: ['C5', 'C1', 'C3', 'C6', 'C2', 'C8', 'C4', 'C7']
+
+Necessary checks:
+- Maximum hall capacity is 160; all courses fit Hall A.
+- C5 has 150 students, so it cannot use Hall B (capacity 120).
+- At most 2 exams can run in one slot because there are 2 halls.
+- Three slots can host at most 3 x 2 = 6 exams, fewer than 8: impossible.
+- C1, C2, C3 form a 3-course clique, so at least 3 distinct slots are needed by clashes.
+
+=== BACKTRACKING SEARCH TRACE ===
+Choose C5 -> S1 (Day 1 FN)
+Reject C1 in S1 (Day 1 FN): clashes with C5
+Choose C1 -> S2 (Day 1 AN)
+Reject C3 in S1 (Day 1 FN): clashes with C5
+Reject C3 in S2 (Day 1 AN): clashes with C1
+Choose C3 -> S3 (Day 2 FN)
+Reject C6 in S1 (Day 1 FN): clashes with C5
+Reject C6 in S2 (Day 1 AN): clashes with C1
+Choose C6 -> S3 (Day 2 FN)
+Choose C2 -> S1 (Day 1 FN)
+Reject C8 in S1 (Day 1 FN): clashes with C5
+Choose C8 -> S2 (Day 1 AN)
+Reject C4 in S1 (Day 1 FN): clashes with C2
+Reject C4 in S2 (Day 1 AN): both halls already occupied
+Reject C4 in S3 (Day 2 FN): clashes with C6
+Choose C4 -> S4 (Day 2 AN)
+Reject C7 in S1 (Day 1 FN): both halls already occupied
+Reject C7 in S2 (Day 1 AN): clashes with C8
+Reject C7 in S3 (Day 2 FN): clashes with C6
+Choose C7 -> S4 (Day 2 AN)
+Search metrics: {'nodes': 9, 'attempts': 20, 'clash_rejects': 10, 'room_rejects': 2, 'backtracks': 0}
+
+Four-slot feasible: True
+
+=== FEASIBLE FOUR-SLOT TIMETABLE ===
+S1 (Day 1 FN):
+  Hall A | C5 | Java Programming | 150 students
+  Hall B | C2 | Operating Systems | 90 students
+S2 (Day 1 AN):
+  Hall A | C1 | Design and Analysis of Algorithms | 120 students
+  Hall B | C8 | Cloud Computing | 70 students
+S3 (Day 2 FN):
+  Hall A | C3 | Database Management Systems | 110 students
+  Hall B | C6 | Discrete Mathematics | 80 students
+S4 (Day 2 AN):
+  Hall A | C4 | Computer Networks | 60 students
+  Hall B | C7 | Artificial Intelligence | 40 students
+Every course scheduled exactly once: True
+
+=== BRANCH-AND-BOUND BEST TIMETABLE ===
+S1 (Day 1 FN):
+  Hall A | C5 | Java Programming | 150 students
+  Hall B | C4 | Computer Networks | 60 students
+S2 (Day 1 AN):
+  Hall A | C1 | Design and Analysis of Algorithms | 120 students
+  Hall B | C7 | Artificial Intelligence | 40 students
+S3 (Day 2 FN):
+  Hall A | C3 | Database Management Systems | 110 students
+  Hall B | C6 | Discrete Mathematics | 80 students
+S4 (Day 2 AN):
+  Hall A | C2 | Operating Systems | 90 students
+  Hall B | C8 | Cloud Computing | 70 students
+Same-day clash penalty (number of clash edges on the same day): 3
+Exact search nodes: 307 | bound prunes: 142
+Day 1 courses: ['C1', 'C4', 'C5', 'C7']
+Day 2 courses: ['C2', 'C3', 'C6', 'C8']
+
+Full unconstrained slot-domain assignments: 4^8 = 65536
+Room choices before constraints (2 halls per course): 2^8 = 256
+Naive combined assignment upper bound: 8^8 = 16777216
+Actual search is much smaller due to early clash, hall-count, capacity and bound pruning.
+
+Verification:
+No same-slot clash: True
+Room capacity and one-exam-per-hall constraints: True
+Exactly-once scheduling: True
