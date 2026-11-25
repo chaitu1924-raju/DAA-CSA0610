@@ -1,0 +1,148 @@
+DAA ASSIGNMENT 4B — CO4: ALL PSEUDOCODES
+
+TASK 1 — WORD WRAP USING DYNAMIC PROGRAMMING
+Let words[1..n] be the ordered words and L be maximum line width.
+DP[i] = minimum penalty for laying out words i through n.
+Base: DP[n+1] = 0.
+For each i from n down to 1:
+    lineLength = 0
+    DP[i] = INFINITY
+    For j from i to n:
+        Add word[j] and required separating space to lineLength.
+        If lineLength > L: stop extending this line.
+        unused = L - lineLength
+        If j = n: linePenalty = 0
+        Else: linePenalty = unused * unused
+        candidate = linePenalty + DP[j+1]
+        If candidate < DP[i]:
+            DP[i] = candidate
+            NEXT[i] = j+1
+Reconstruct from i=1 by repeatedly using NEXT[i].
+For each line report its words, unused spaces and line penalty.
+Time O(n^2); space O(n).
+
+TASK 2 — FRACTIONAL GREEDY AND 0/1 KNAPSACK
+FRACTIONAL_KNAPSACK(items, W):
+    Sort items by decreasing value/weight ratio.
+    remaining = W; totalValue = 0
+    For each item in sorted order:
+        fraction = MIN(1, remaining / item.weight)
+        If fraction > 0:
+            Record item and fraction.
+            totalValue += fraction * item.value
+            remaining -= fraction * item.weight
+        If remaining = 0: stop.
+    Return selected fractions and totalValue.
+Complexity O(n log n) time, O(n) storage for ordering.
+
+ZERO_ONE_KNAPSACK(items, W):
+    DP[0..n][0..W] = 0
+    TAKE[1..n][0..W] = FALSE
+    For i = 1..n:
+        For capacity c = 0..W:
+            exclude = DP[i-1][c]
+            include = -infinity
+            If weight[i] <= c:
+                include = value[i] + DP[i-1][c-weight[i]]
+            If include > exclude:
+                DP[i][c] = include; TAKE[i][c] = TRUE
+            Else:
+                DP[i][c] = exclude
+    Reconstruct from i=n down to 1:
+        If TAKE[i][c]: select item i; c -= weight[i]
+    Return DP[n][W] and selected items.
+Time O(nW), space O(nW).
+
+TASK 3 — GRAPH ROUTING
+DIJKSTRA(G, source):
+    Set all distances to infinity; predecessor to NIL; source distance=0.
+    While an unfinalised reachable vertex exists:
+        Select unfinalised vertex u with minimum tentative distance.
+        Finalise u.
+        For each outgoing edge (u,v,w):
+            If v is not finalised and dist[u]+w < dist[v]:
+                dist[v]=dist[u]+w; predecessor[v]=u.
+    Return distances, predecessors and finalisation order.
+Requires non-negative edge weights.
+
+BELLMAN_FORD(G, source):
+    Initialise distances and predecessors; source distance=0.
+    Repeat |V|-1 times:
+        For every edge (u,v,w), if dist[u] is finite and
+        dist[u]+w < dist[v], update distance and predecessor.
+    Scan every edge once more.
+    If any reachable edge can still be relaxed, report a reachable negative cycle.
+    Otherwise return distances and predecessors.
+Time O(VE).
+
+FLOYD_WARSHALL:
+    D[i][i]=0; D[i][j]=edge weight if edge exists, otherwise infinity.
+    For k=1..V:
+        For i=1..V:
+            For j=1..V:
+                D[i][j]=MIN(D[i][j], D[i][k]+D[k][j]).
+    Return all-pairs distance matrix. Time O(V^3), space O(V^2).
+
+WARSHALL:
+    R[i][i]=TRUE; R[i][j]=TRUE for each directed edge i→j.
+    For k=1..V:
+        For i=1..V:
+            For j=1..V:
+                R[i][j] = R[i][j] OR (R[i][k] AND R[k][j]).
+    Return reachability matrix.
+
+TASK 4 — TWO-LINE ASSEMBLY-LINE SCHEDULING
+F1[1]=entry1+a1[1]; F2[1]=entry2+a2[1].
+For station j=2..n:
+    stay1=F1[j-1]+a1[j]
+    transferTo1=F2[j-1]+t2[j-1]+a1[j]
+    F1[j]=MIN(stay1, transferTo1); store predecessor line.
+    stay2=F2[j-1]+a2[j]
+    transferTo2=F1[j-1]+t1[j-1]+a2[j]
+    F2[j]=MIN(stay2, transferTo2); store predecessor line.
+Compare F1[n]+exit1 and F2[n]+exit2.
+Choose smaller, then follow predecessor records backward to reconstruct line
+at every station and report transfer points.
+For three lines, retain F[line][station] and minimise over every possible
+previous line, adding the corresponding transfer time.
+
+TASK 5 — MINIMUM SPANNING TREE
+KRUSKAL:
+    Sort edges by nondecreasing weight.
+    Initialise each vertex as its own disjoint set.
+    For each edge (u,v,w):
+        If FIND(u) != FIND(v):
+            Add edge to MST; UNION(u,v).
+        Else reject edge because it creates a cycle.
+    Stop after |V|-1 accepted edges (for a connected graph).
+
+PRIM:
+    Start from any vertex; mark it included.
+    Repeatedly choose the minimum-weight edge crossing from included
+    vertices to an unincluded vertex.
+    Add that edge and new vertex.
+    Stop when all vertices are included.
+
+BORUVKA:
+    Initially every vertex is a separate component.
+    In each phase, find the cheapest outgoing edge for every component.
+    Add each selected edge that joins two distinct components; merge them.
+    Repeat until one component remains.
+Different valid MST edge sets can have equal total cost when edge weights tie.
+
+TASK 6 — TRAVELLING SALESPERSON: HELD-KARP DP
+Let hub be vertex 0. DP[S][j] is the minimum cost of a path that starts
+at hub, visits exactly the locations in subset S (not including hub),
+and ends at j, where j belongs to S.
+Base: DP[{j}][j] = cost[0][j].
+Transition:
+    DP[S][j] = MIN over k in S-{j} of
+               DP[S-{j}][k] + cost[k][j].
+Final:
+    MIN over j of DP[AllLocations][j] + cost[j][0].
+Store the predecessor k for each state to reconstruct the route.
+The Held-Karp state count is O(m*2^m); time O(m^2*2^m), space O(m*2^m),
+where m is the number of delivery locations.
+For large m (e.g. 200), investigate approximation or heuristic methods
+such as nearest-neighbour followed by local search; these sacrifice a
+guarantee of mathematical optimality for speed.
