@@ -1,0 +1,168 @@
+DAA ASSIGNMENT 5 — CO5: PART A ALL PSEUDOCODES AND DESIGN ANSWERS
+
+TASK A1 — CONSTRAINT-AWARE GRAPH COLOURING
+
+A1.1 MODEL
+Input: Undirected conflict graph G=(V,E), and maximum number k of server groups.
+Output: A colour in {1,...,k} for every vertex, or FAILURE.
+Decision: Choose a colour for the next unassigned service.
+Constraint: For every edge (u,v), colour[u] must differ from colour[v].
+Goal: Every vertex is assigned and all edge constraints hold.
+
+A1.2 SEARCH STATE
+A node in the search tree represents a partial assignment of colours to the first
+selected vertices. Maintain the current colour array, the vertex-selection order,
+and the number of assigned vertices.
+
+A1.3 PRUNING
+Reject a candidate colour c for vertex v if any already-coloured neighbour u has
+colour[u]=c. Descendants cannot repair this conflict without changing an earlier
+assignment, so the branch is abandoned and the assignment is undone.
+
+A1.4 COMPLETE PSEUDOCODE
+ALGORITHM GraphColour(G, k)
+    FOR each vertex v in V:
+        colour[v] <- UNASSIGNED
+    RETURN SEARCH(0)
+
+FUNCTION SEARCH(depth)
+    IF depth = |V|:
+        RETURN SUCCESS
+    v <- next vertex in chosen order
+    FOR c <- 1 TO k:
+        feasible <- TRUE
+        FOR each neighbour u of v:
+            IF colour[u] = c:
+                feasible <- FALSE
+                BREAK
+        IF feasible:
+            colour[v] <- c
+            IF SEARCH(depth+1) = SUCCESS:
+                RETURN SUCCESS
+            colour[v] <- UNASSIGNED       // undo
+    RETURN FAILURE
+
+A1.5 TRACE — FIVE-CYCLE A-B-C-D-E-A, k=2
+A=1: feasible, explore.
+B=1: rejected because adjacent to A; B=2 accepted.
+C=1: accepted (different from B).
+D=1: rejected because adjacent to C; D=2 accepted.
+E=1: rejected because adjacent to A; E=2 rejected because adjacent to D.
+Undo D=2, try D=1; still conflicts with C=1. Undo C=1, try C=2; this conflicts
+with B=2. Backtrack to B and try another possibility. The cycle is even-length,
+so one valid colouring is A=1,B=2,C=1,D=2,E=2? This assignment conflicts on
+edge E-A (2 vs 1 is fine) and D-E (2 vs 2 is not fine); correct alternating
+colouring for a 5-cycle is impossible. Therefore use a 6-cycle for a positive
+example or use the path A-B-C-D-E for the five-vertex colourable trace:
+A=1, B=2, C=1, D=2, E=1. The implementation's B1 positive graph is a cycle
+of length 8, which is bipartite and colourable.
+
+TASK A2 — SUBSET SUM BACKTRACKING
+
+A2.1 WASTE
+Generating every complete subset before checking its sum performs up to 2^n
+subset constructions and delays rejection of prefixes already exceeding target.
+
+A2.2 PSEUDOCODE
+ALGORITHM SubsetSum(A, target)
+    SORT A in nondecreasing order
+    RETURN SEARCH(1, 0, empty set)
+
+FUNCTION SEARCH(i, currentSum, chosen)
+    IF currentSum = target: OUTPUT chosen; RETURN TRUE
+    IF currentSum > target OR i > n: RETURN FALSE
+    // All values are positive, so adding more values cannot reduce the sum.
+    IF SEARCH(i+1, currentSum+A[i], chosen UNION {A[i]}): RETURN TRUE
+    RETURN SEARCH(i+1, currentSum, chosen)
+END
+Pruning: currentSum>target. Also prune if currentSum + sum(remaining values)<target.
+Negative-number challenge: currentSum>target is no longer safe because later
+negative values may reduce the sum. The positive-number assumption is violated.
+
+A2.3 PRUNING TRACE
+A=[3,5,8], target=7. Include 3, then include 5 gives currentSum=8>7.
+Terminate that branch immediately; all remaining values are positive, so the
+sum can only stay the same or increase.
+
+TASK A3 — COMMON BACKTRACKING PATTERN
+
+Component | N-Queens | Subset Sum | Graph Colouring
+State | partial row-to-column placement | partial chosen subset and sum | partial vertex colours
+Decision | column for next row | include/exclude next value | colour for next vertex
+Candidates | columns 1..N | include, exclude | colours 1..k
+Feasibility | no shared column/diagonal | positive-sum bounds | no equal-colour adjacent vertices
+Goal | N queens placed | sum equals target | all vertices coloured
+Prune | attack conflict | sum exceeds target / insufficient remaining sum | neighbour conflict
+Undo | remove queen | remove selected element / restore sum | unassign colour
+
+A3.1 COMMON PATTERN
+All three explore a tree of partial solutions, extend one decision at a time, reject
+infeasible or unpromising partial states, and undo decisions when a branch fails.
+
+A3.2 GENERIC FRAMEWORK
+FUNCTION BACKTRACK(State)
+    IF GOAL(State): RECORD solution; RETURN success
+    x <- SELECT_NEXT_DECISION(State)
+    FOR each candidate c in CANDIDATES(State,x):
+        IF FEASIBLE(State,x,c):
+            APPLY(State,x,c)
+            IF BACKTRACK(State): RETURN success
+            UNDO(State,x,c)
+    RETURN failure
+
+A3.3 UNDO
+Undo restores the exact parent state before another candidate is explored.
+For graph colouring, failing to unassign a vertex leaves a stale colour that can
+incorrectly reject later candidates or falsely report a solution.
+
+TASK A4 — COMPLEXITY CLASSES
+
+Problem | What is a solution? | Efficient verification? | Classification
+Shortest Path | path with stated endpoints and cost | yes, sum edges and check optimality via polynomial algorithm | P
+Minimum Spanning Tree | spanning tree and total weight | yes, tree/connectivity/weight; optimum check polynomial | P
+Subset Sum decision | subset summing exactly to target | yes, add selected values | NP-Complete
+Hamiltonian Cycle decision | cycle visiting each vertex once and returning | yes, check edges and uniqueness | NP-Complete
+TSP decision | tour with cost <= bound | yes, check tour and sum | NP-Complete
+TSP optimisation | minimum-cost tour | candidate tour verifiable as a feasible tour, but optimality proof is hard | NP-Hard
+
+NP means yes-instances have certificates verifiable in polynomial time; it does not
+mean merely “hard to solve”. NP-Completeness is defined for decision problems.
+The optimisation TSP is NP-Hard; its decision version is NP-Complete.
+
+TASK A5 — SET COVER
+
+Exact approach: enumerate centre subsets in increasing subset size; union the zones
+served by selected centres; the first subset covering the universe is optimal.
+This can require examining 2^m subsets for m centres.
+
+GREEDY_SET_COVER(Universe, Centres)
+    Uncovered <- Universe
+    Selected <- empty set
+    WHILE Uncovered is not empty:
+        choose centre C maximising |C intersect Uncovered|
+        IF this maximum is zero: RETURN no feasible cover
+        add C to Selected
+        Uncovered <- Uncovered minus C
+    RETURN Selected
+This guarantees a feasible cover when one exists, but not a minimum-size cover.
+The classical greedy set-cover approximation has a logarithmic approximation bound.
+
+PART B IMPLEMENTATION OVERVIEW
+
+B1: Instrument graph-colouring backtracking with node count, candidate attempts,
+rejected branches, backtracks and maximum depth. Compare input order with descending
+degree order. Test a colourable graph, an uncolourable graph for the selected k,
+and an empty-graph boundary case.
+
+B2: Compare same-size graphs: an 8-cycle with 3 colours and complete graph K8 with
+3 colours. Predict K8 requires more search because constraints rapidly exhaust
+available colours and force backtracking.
+
+B3: Exact set cover checks subsets by increasing cardinality. Greedy set cover
+selects the centre covering the most currently uncovered zones. Compare three
+instances and include a constructed greedy counterexample. Count combinations and
+candidate evaluations, not just elapsed time.
+
+B4: First Fit Decreasing sorts workloads from largest to smallest and places each
+in the first server with sufficient remaining capacity; otherwise opens a server.
+It is a fast heuristic, not an exact minimum-bin algorithm.
