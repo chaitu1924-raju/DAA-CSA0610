@@ -1,0 +1,69 @@
+DAA ASSIGNMENT 4A — CONSOLIDATED TRACES AND ANSWERS
+CO4: Dynamic Programming and Greedy Strategies
+Student: J. Lokesh
+
+TASK 1 — FRACTIONAL KNAPSACK DESIGN
+Greedy-choice rule: sort by value/weight ratio descending. Load a full package
+if it fits; otherwise load remaining_capacity/weight fraction and stop.
+Deficiencies in original: missing input/output definitions, ordering criterion,
+definition of “best”, feasibility test, fractional package handling, remaining
+capacity update, partial value calculation, termination and result construction.
+Complexity: O(n log n) sorting + O(n) scan.
+
+TASK 2 — JOB SEQUENCING TRACE
+Input: A(2,80), B(1,35), C(2,60), D(3,40), E(1,25)
+Profit order: A, C, D, B, E
+A -> slot 2; C -> slot 1; D -> slot 3; B -> reject; E -> reject.
+Final slots: [C, A, D]. Total profit = 180.
+Challenge: change D profit from 40 to 90. Order becomes D, A, C, B, E.
+D -> slot 3; A -> slot 2; C -> slot 1. Total profit = 230.
+
+TASK 3 — 0/1 KNAPSACK TRACE
+Items P(2,12), Q(3,20), R(4,25), S(5,30); capacity 7.
+After P: value 12 is available for capacities 2 through 7.
+After Q: capacity 5..7 can hold P+Q, value 32.
+After R: at capacity 7, compare R=25 with P+Q=32; retain P+Q.
+After S: at capacity 7, compare S=30 with P+Q=32; retain P+Q.
+Selected P and Q; weight 5; maximum value 32.
+DP state: best value using first i items at capacity at most c.
+Time and space: O(nW).
+
+TASK 4 — WORD BREAK FORENSICS
+Faulty condition checks only whether Text[j..i-1] is a dictionary word.
+Counterexample: Text="ab", Dictionary={"b"}.
+DP[0]=TRUE; DP[1]=FALSE; at i=2, substring "b" is found and faulty logic
+sets DP[2]=TRUE even though prefix "a" cannot be segmented.
+Minimal repair: require BOTH DP[j]=TRUE AND substring(Text,j,i) in Dictionary.
+Regression: Text="apple", Dictionary={"app","le"} remains TRUE:
+DP[3] is made true by "app"; DP[5] is made true by "le" after DP[3].
+
+TASK 5 — SHORTEST PATH TRACE
+Edges: A-B 4, A-C 7, B-C 2, B-D 6, C-D 1, D-E 3, C-E 8.
+Dijkstra:
+Start A=0, others infinity.
+Process A: B=4, C=7.
+Process B: C=6, D=10.
+Process C: D=7, E=14.
+Process D: E=10.
+Final: A=0, B=4, C=6, D=7, E=10.
+Shortest path to E: A-B-C-D-E.
+Bellman-Ford repeats relaxation |V|-1 times and performs one extra pass to detect
+a reachable negative cycle. Floyd-Warshall computes all-pairs distances:
+D[i][j] = min(D[i][j], D[i][k]+D[k][j]).
+
+TASK 6 — WEIGHTED INTERVAL SCHEDULING
+Jobs sorted by finish time:
+J1(1,3,20), J2(2,5,50), J3(4,6,30), J4(6,8,40),
+J5(5,9,60), J6(8,10,30), J7(9,11,50), J8(11,13,40).
+Predecessors p(i): [0,0,1,3,2,4,5,7].
+DP values OPT(0..8): [0,20,50,50,90,110,120,160,200].
+Reconstruction: take J8 -> J7 -> J5 -> J2.
+Selected in chronological order: J2, J5, J7, J8.
+Total = 50+60+50+40 = 200.
+Adversarial input:
+X1=(1,10,100), X2=(1,3,40), X3=(3,5,40),
+X4=(5,7,40), X5=(7,10,40).
+Highest-value-first greedy selects X1 for 100. Weighted interval DP selects
+X2,X3,X4,X5 for 160. This demonstrates why a weighted objective needs DP.
+
+END OF CONSOLIDATED TRACE

@@ -1,0 +1,479 @@
+DAA ASSIGNMENT 4A — CO4
+SIMATS ENGINEERING — DESIGN AND ANALYSIS OF ALGORITHMS
+ALGORITHMIC DESIGN THROUGH PSEUDOCODE
+
+IMPORTANT: This assignment explicitly requires language-independent pseudocode,
+not Python/C/C++/Java implementation code.
+
+TASK 1 — ALGORITHM DESIGN REVIEW: FRACTIONAL KNAPSACK
+
+1.1 DIAGNOSE THE POOR PSEUDOCODE
+1. Inputs are unspecified: number of packages, each weight/value, and vehicle capacity
+   are not defined.
+2. Output is vague: the selected package fractions, total weight and total value are
+   not specified.
+3. “Arrange packages” gives no ordering key. An implementer cannot know how to rank.
+4. “Select the best package” does not define best. For divisible packages, the
+   appropriate greedy criterion is value per unit weight.
+5. The feasibility check is missing. The algorithm must compare package weight with
+   remaining capacity.
+6. Partial loading is not described. If a package does not fully fit, a fraction must
+   be loaded because packages are divisible.
+7. Remaining capacity is not updated explicitly.
+8. The value contributed by a partial package is not calculated.
+9. Termination is vague. The process must stop when capacity is zero or all packages
+   have been considered.
+10. The result construction does not identify selected fractions or total value.
+
+1.2 REPAIRED PSEUDOCODE — FRACTIONAL KNAPSACK
+ALGORITHM FractionalKnapsack(Packages, Capacity)
+INPUT:
+    Packages: records containing packageID, weight, value
+    Capacity: non-negative vehicle capacity
+OUTPUT:
+    SelectedFractions: packageID and fraction loaded
+    TotalWeight
+    TotalValue
+BEGIN
+    FOR each package P in Packages DO
+        IF P.weight <= 0 THEN
+            REPORT invalid package weight
+            RETURN
+        END IF
+        P.ratio ← P.value / P.weight
+    END FOR
+
+    SORT Packages by decreasing ratio
+    Remaining ← Capacity
+    TotalWeight ← 0
+    TotalValue ← 0
+    SelectedFractions ← empty list
+
+    FOR each package P in sorted Packages DO
+        IF Remaining = 0 THEN
+            BREAK
+        END IF
+
+        IF P.weight <= Remaining THEN
+            Fraction ← 1
+        ELSE
+            Fraction ← Remaining / P.weight
+        END IF
+
+        IF Fraction > 0 THEN
+            APPEND (P.packageID, Fraction) to SelectedFractions
+            LoadedWeight ← Fraction * P.weight
+            LoadedValue ← Fraction * P.value
+            Remaining ← Remaining - LoadedWeight
+            TotalWeight ← TotalWeight + LoadedWeight
+            TotalValue ← TotalValue + LoadedValue
+        END IF
+    END FOR
+
+    RETURN SelectedFractions, TotalWeight, TotalValue
+END
+
+1.3 DESIGN DEFENCE (UNDER 100 WORDS)
+This is pseudocode because it describes the algorithm's inputs, outputs, decisions,
+ordering, calculations, updates and termination in language-independent steps.
+It does not depend on programming-language syntax, data types, libraries or compiler
+rules. Each operation is precise enough for another engineer to implement. The
+greedy choice is explicit: consider packages in decreasing value-per-weight order
+and take as much as the remaining capacity permits. Fractional loading is stated
+mathematically, rather than hidden behind informal phrases such as “best package”.
+
+TASK 2 — JOB SEQUENCING WITH DEADLINES
+
+2.1 PROBLEM MODEL
+Input:
+    n independent jobs; each job has jobID, positive integer deadline and profit.
+Output:
+    A feasible slot-by-slot schedule and maximum total profit.
+Objective:
+    Maximise the sum of profits of jobs completed on or before their deadlines.
+Constraints:
+    Each job takes exactly one slot; one job per slot; a job can be selected at most
+    once; a job scheduled in slot s must satisfy s <= deadline.
+Decision:
+    Which jobs to accept and which available slot to assign to each accepted job?
+Feasibility information:
+    The job deadline and whether a slot at or before that deadline is unoccupied.
+
+2.2 GREEDY HYPOTHESIS
+Sort jobs by decreasing profit and place each job in the latest currently free slot
+that is no later than its deadline. This protects earlier slots for jobs with tighter
+deadlines while accepting the highest-profit jobs first.
+
+2.3 PSEUDOCODE
+ALGORITHM JobSequencing(Jobs)
+INPUT: Jobs with jobID, deadline, profit
+OUTPUT: Schedule and TotalProfit
+BEGIN
+    SORT Jobs by decreasing profit
+    MaximumDeadline ← maximum deadline among Jobs
+    Create Slots[1..MaximumDeadline], initially EMPTY
+    TotalProfit ← 0
+
+    FOR each Job in sorted Jobs DO
+        FOR Slot ← MIN(Job.deadline, MaximumDeadline) DOWNTO 1 DO
+            IF Slots[Slot] = EMPTY THEN
+                Slots[Slot] ← Job.jobID
+                TotalProfit ← TotalProfit + Job.profit
+                BREAK
+            END IF
+        END FOR
+    END FOR
+
+    RETURN Slots, TotalProfit
+END
+
+2.4 DESK-CHECK — GIVEN DATA
+Jobs: A(2,80), B(1,35), C(2,60), D(3,40), E(1,25)
+Order by profit: A(80), C(60), D(40), B(35), E(25)
+Slots: 1, 2, 3
+
+A: latest free slot <= 2 is slot 2. Schedule [ -, A, - ], profit 80.
+C: latest free slot <= 2 is slot 1. Schedule [ C, A, - ], profit 140.
+D: latest free slot <= 3 is slot 3. Schedule [ C, A, D ], profit 180.
+B: slot 1 is occupied; no free slot <= 1. Reject B.
+E: slot 1 is occupied; no free slot <= 1. Reject E.
+Final schedule: slot 1=C, slot 2=A, slot 3=D.
+Total profit = 60 + 80 + 40 = 180.
+
+2.5 CHALLENGE — CHANGE ONE INPUT
+Change D's profit from 40 to 90.
+New descending order: D(90), A(80), C(60), B(35), E(25).
+D is placed in latest free slot 3; A in slot 2; C in slot 1.
+B and E cannot be placed. The schedule becomes [C, A, D], and total profit is
+90 + 80 + 60 = 230. Prediction: selected jobs stay the same, but D's profit
+increases the total by 50. The decision order is unchanged because D was already
+ahead of B and E and remains behind neither A nor C? It moves to first, but its
+latest feasible slot is 3, so the final occupied slots remain the same.
+
+TASK 3 — DYNAMIC PROGRAMMING: 0/1 KNAPSACK
+
+3.1 STATE
+Let DP[i][c] be the maximum total value obtainable using only the first i items
+with total weight at most capacity c. Each item may be selected at most once.
+
+3.2 RECURRENCE
+Base:
+    DP[0][c] = 0 for every c from 0 to W.
+    DP[i][0] = 0 for every i from 0 to n.
+For item i with weight wt[i] and value val[i]:
+    If wt[i] > c:
+        DP[i][c] = DP[i-1][c]
+    Otherwise:
+        DP[i][c] = MAX(DP[i-1][c],
+                       val[i] + DP[i-1][c-wt[i]])
+The first term excludes the item; the second includes it and uses the best
+solution from the previous items and remaining capacity.
+
+3.3 PSEUDOCODE WITH RECONSTRUCTION
+ALGORITHM ZeroOneKnapsack(Items, W)
+INPUT: n items with itemID, weight, value; capacity W
+OUTPUT: MaximumValue and SelectedItems
+BEGIN
+    CREATE DP[0..n][0..W], initialised to 0
+    CREATE TAKE[1..n][0..W], initialised to FALSE
+
+    FOR i ← 1 TO n DO
+        FOR c ← 0 TO W DO
+            EXCLUDE ← DP[i-1][c]
+            IF weight[i] <= c THEN
+                INCLUDE ← value[i] + DP[i-1][c-weight[i]]
+                IF INCLUDE > EXCLUDE THEN
+                    DP[i][c] ← INCLUDE
+                    TAKE[i][c] ← TRUE
+                ELSE
+                    DP[i][c] ← EXCLUDE
+                END IF
+            ELSE
+                DP[i][c] ← EXCLUDE
+            END IF
+        END FOR
+    END FOR
+
+    MaximumValue ← DP[n][W]
+    SelectedItems ← empty list
+    c ← W
+    FOR i ← n DOWNTO 1 DO
+        IF TAKE[i][c] = TRUE THEN
+            APPEND itemID[i] to SelectedItems
+            c ← c - weight[i]
+        END IF
+    END FOR
+    REVERSE SelectedItems
+    RETURN MaximumValue, SelectedItems
+END
+
+3.4 DESK-CHECK
+Items: P(weight 2,value 12), Q(3,20), R(4,25), S(5,30); capacity 7.
+Useful states:
+    After P: capacity 2..7 can obtain value 12 by selecting P.
+    After Q: capacity 3 obtains 20; capacity 5..7 obtains 32 using P+Q.
+    After R: capacity 4 obtains 25; capacity 6..7 compares R(25) with P+Q(32),
+             so P+Q remains better at capacity 7.
+    After S: capacity 5 obtains 30; capacity 7 compares S(30) with P+Q(32),
+             so P+Q remains optimal.
+Final selection: P and Q. Total weight = 2+3 = 5. Total value = 12+20 = 32.
+No other feasible combination exceeds 32.
+
+3.5 DEPENDENCY
+A state in row i depends only on states in row i-1: excluding item i uses
+DP[i-1][c], while including it uses DP[i-1][c-weight[i]]. Therefore the previous
+item row must be completed before row i is computed. Filling rows from 1 to n
+ensures every dependency is already available and prevents reusing an item.
+
+TASK 4 — WORD BREAK PSEUDOCODE FORENSICS
+
+4.1 DEFECT
+The condition checks only whether Text[j..i-1] is a dictionary word. It does not
+check whether the prefix ending at j can itself be segmented. The missing condition
+is DP[j] = TRUE.
+
+4.2 FAILING INPUT
+Text = "apple"
+Dictionary = {"app", "le"}
+Faulty trace:
+    DP[0] = TRUE
+    i=1: no dictionary substring ending at 1; DP[1]=FALSE
+    i=2: no dictionary substring ending at 2; DP[2]=FALSE
+    i=3: substring "app" is in dictionary; faulty algorithm sets DP[3]=TRUE
+    i=4: no valid complete prefix; DP[4]=FALSE
+    i=5: substring "le" is in dictionary; faulty algorithm sets DP[5]=TRUE
+It incorrectly returns TRUE even though the prefix before "le" is "app", which
+is segmentable in this particular example. To make the failure explicit, use:
+Text = "xapple", Dictionary = {"app", "le"}.
+The faulty algorithm sets DP[5] based on "app" and DP[6] based on "le" without
+requiring DP[4] or DP[5] respectively; the false prefix can propagate.
+A minimal clearer counterexample is:
+Text = "apple", Dictionary = {"app", "le"} is actually segmentable, so it is not
+a valid failing case. Use Text = "apple", Dictionary = {"apple", "le"}:
+the faulty algorithm may set DP[5] TRUE from "apple" (valid) also not failing.
+Use Text = "catsand", Dictionary={"cats","and"}: faulty DP[4]=TRUE from "cats";
+DP[7]=TRUE from "and", and the text is valid. Therefore choose:
+Text = "catsandx", Dictionary={"cats","and","x"} — also valid.
+A robust failing example for the given loop is Text="ab", Dictionary={"b"}:
+at i=2 it finds substring "b" and sets DP[2]=TRUE despite DP[1]=FALSE.
+Trace: DP[0]=TRUE; i=1 => DP[1]=FALSE; i=2, j=1, substring "b" is a word,
+so faulty DP[2]=TRUE. Correct answer is FALSE because "a" is not in dictionary.
+
+4.3 MINIMAL REPAIR
+Replace:
+    IF substring(Text, j, i) is in Dictionary THEN
+with:
+    IF DP[j] = TRUE AND substring(Text, j, i) is in Dictionary THEN
+All other logic remains unchanged.
+
+CORRECTED CORE
+FOR i ← 1 TO n DO
+    DP[i] ← FALSE
+    FOR j ← 0 TO i-1 DO
+        IF DP[j] = TRUE AND substring(Text,j,i) is in Dictionary THEN
+            DP[i] ← TRUE
+            BREAK
+        END IF
+    END FOR
+END FOR
+RETURN DP[n]
+
+4.4 REGRESSION CHECK
+Text="apple", Dictionary={"app","le"}.
+DP[0]=TRUE. At i=3, DP[0] and "app" make DP[3]=TRUE.
+At i=5, DP[3] and "le" make DP[5]=TRUE. The corrected algorithm returns TRUE,
+preserving the valid segmentation "app" + "le".
+
+TASK 5 — SHORTEST PATHS: DIJKSTRA, BELLMAN-FORD, FLOYD
+
+Graph edges:
+A→B=4, A→C=7, B→C=2, B→D=6, C→D=1, D→E=3, C→E=8.
+
+5.1 DIJKSTRA PSEUDOCODE (NON-NEGATIVE EDGE WEIGHTS)
+ALGORITHM Dijkstra(G, source)
+BEGIN
+    FOR each vertex v DO
+        dist[v] ← INFINITY
+        pred[v] ← NIL
+        visited[v] ← FALSE
+    END FOR
+    dist[source] ← 0
+
+    WHILE there exists an unvisited vertex with finite distance DO
+        u ← unvisited vertex with minimum dist[u]
+        visited[u] ← TRUE
+        FOR each edge (u,v) with weight w DO
+            IF visited[v] = FALSE AND dist[u]+w < dist[v] THEN
+                dist[v] ← dist[u]+w
+                pred[v] ← u
+            END IF
+        END FOR
+    END WHILE
+    RETURN dist, pred
+END
+
+Desk-check from A:
+Initial: A=0; B=∞; C=∞; D=∞; E=∞.
+Select A: B=4 via A; C=7 via A.
+Select B (4): C=min(7,4+2)=6 via B; D=10 via B.
+Select C (6): D=min(10,6+1)=7 via C; E=14 via C.
+Select D (7): E=min(14,7+3)=10 via D.
+Select E (10): no change.
+Final distances: A=0, B=4, C=6, D=7, E=10.
+Shortest path to E: A→B→C→D→E.
+
+5.2 BELLMAN-FORD FOR NEGATIVE EDGES
+The unsafe Dijkstra decision is permanently finalising the currently smallest
+tentative-distance vertex. A later path containing a negative edge may reduce
+that distance, so the greedy finalisation is not safe.
+
+ALGORITHM BellmanFord(G, source)
+BEGIN
+    Set dist[v] ← INFINITY and pred[v] ← NIL for every vertex
+    dist[source] ← 0
+    REPEAT |V|-1 TIMES:
+        FOR each edge (u,v,w) DO
+            IF dist[u] != INFINITY AND dist[u]+w < dist[v] THEN
+                dist[v] ← dist[u]+w
+                pred[v] ← u
+            END IF
+        END FOR
+    END REPEAT
+
+    FOR each edge (u,v,w) DO
+        IF dist[u] != INFINITY AND dist[u]+w < dist[v] THEN
+            REPORT reachable negative-weight cycle
+            RETURN
+        END IF
+    END FOR
+    RETURN dist, pred
+END
+Repeated relaxation allows paths with more edges to improve earlier estimates.
+After |V|-1 passes, every simple shortest path has had enough opportunities to
+propagate. A further improvement indicates a reachable negative cycle.
+
+5.3 FLOYD-WARSHALL — ALL-PAIRS SHORTEST PATHS
+State D[k][i][j]: shortest distance from vertex i to vertex j when only vertices
+1..k may be used as intermediate vertices.
+Initialisation:
+    D[0][i][i] ← 0
+    D[0][i][j] ← edge weight(i,j), if edge exists
+    D[0][i][j] ← INFINITY, otherwise
+Transition:
+    D[k][i][j] ← MIN(D[k-1][i][j],
+                     D[k-1][i][k] + D[k-1][k][j])
+In-place pseudocode:
+FOR k ← 1 TO |V| DO
+    FOR i ← 1 TO |V| DO
+        FOR j ← 1 TO |V| DO
+            D[i][j] ← MIN(D[i][j], D[i][k]+D[k][j])
+        END FOR
+    END FOR
+END FOR
+The single-source algorithms compute distances from one source. Floyd-Warshall
+computes a distance for every ordered pair and progressively permits more
+intermediate vertices. Time O(V^3), space O(V^2).
+
+TASK 6 — ENERGY-AWARE JOB SCHEDULING
+
+6.1 PROBLEM ABSTRACTION
+Input: jobs with ID, start, finish and energy-saving value.
+Output: a compatible subset of jobs and maximum total energy-saving value.
+Objective: maximise sum of values.
+Constraint: no two selected intervals overlap. A job finishing at time t and
+another starting at t are compatible.
+Decision: include or exclude each job, considering compatibility with prior jobs.
+
+6.2 STRATEGY
+Use weighted interval scheduling with dynamic programming. Earliest-finish-time
+greedy is optimal for maximising the NUMBER of compatible jobs, not generally
+for maximising their total values. Highest-value-first and shortest-duration-first
+can also fail. The objective uses weights (energy-saving values), so DP compares
+the value of taking a job with the best compatible earlier solution.
+
+6.3 STATE AND RECURRENCE
+Sort jobs by nondecreasing finish time.
+p(i) = largest index j < i whose finish[j] <= start[i], or 0 if none.
+OPT(i) = maximum energy-saving value using jobs 1..i.
+Base: OPT(0)=0.
+Recurrence:
+    OPT(i) = MAX(value[i] + OPT(p(i)), OPT(i-1))
+First term takes job i and the best compatible prefix; second excludes it.
+
+6.4 COMPLETE PSEUDOCODE WITH RECONSTRUCTION
+ALGORITHM WeightedIntervalScheduling(Jobs)
+INPUT: jobs (ID, start, finish, value)
+OUTPUT: selected job IDs and maximum total value
+BEGIN
+    SORT Jobs by nondecreasing finish time
+    n ← number of Jobs
+
+    FOR i ← 1 TO n DO
+        p[i] ← 0
+        FOR j ← i-1 DOWNTO 1 DO
+            IF finish[j] <= start[i] THEN
+                p[i] ← j
+                BREAK
+            END IF
+        END FOR
+    END FOR
+
+    OPT[0] ← 0
+    FOR i ← 1 TO n DO
+        TAKE_VALUE ← value[i] + OPT[p[i]]
+        SKIP_VALUE ← OPT[i-1]
+        OPT[i] ← MAX(TAKE_VALUE, SKIP_VALUE)
+    END FOR
+
+    Selected ← empty list
+    i ← n
+    WHILE i > 0 DO
+        IF value[i] + OPT[p[i]] > OPT[i-1] THEN
+            APPEND Jobs[i].ID to Selected
+            i ← p[i]
+        ELSE
+            i ← i-1
+        END IF
+    END WHILE
+    REVERSE Selected
+    RETURN Selected, OPT[n]
+END
+
+6.5 DESK-CHECK — PROVIDED EIGHT JOBS
+Jobs sorted by finish time are already in the given order:
+J1(1,3,20), J2(2,5,50), J3(4,6,30), J4(6,8,40),
+J5(5,9,60), J6(8,10,30), J7(9,11,50), J8(11,13,40).
+Predecessors:
+p(1)=0, p(2)=0, p(3)=1, p(4)=3, p(5)=2, p(6)=4, p(7)=5, p(8)=7.
+DP:
+OPT(0)=0
+OPT(1)=20
+OPT(2)=50
+OPT(3)=MAX(30+20,50)=50
+OPT(4)=MAX(40+50,50)=90
+OPT(5)=MAX(60+50,90)=110
+OPT(6)=MAX(30+90,110)=120
+OPT(7)=MAX(50+110,120)=160
+OPT(8)=MAX(40+160,160)=200
+Reconstruction:
+Take J8; move to p(8)=7. Take J7; move to p(7)=5.
+Take J5; move to p(5)=2. Take J2; move to p(2)=0.
+Selected jobs: J2, J5, J7, J8.
+Total energy-saving value = 50+60+50+40 = 200.
+Intervals: [2,5], [5,9], [9,11], [11,13] are compatible under the stated
+finish-time-equals-start-time rule.
+
+6.6 ADVERSARIAL DATASET (GREEDY COUNTEREXAMPLE)
+Construct five jobs:
+X1: start 1, finish 10, value 100
+X2: start 1, finish 3, value 40
+X3: start 3, finish 5, value 40
+X4: start 5, finish 7, value 40
+X5: start 7, finish 10, value 40
+A highest-value-first greedy rule chooses X1 for value 100 and blocks all others.
+Weighted interval DP chooses X2, X3, X4, X5 for total value 160.
+Prediction: the single long, high-value interval will tempt a local greedy method,
+but four mutually compatible shorter jobs have a greater combined value.
+Critical decision: compare value[i]+OPT(p(i)) with OPT(i-1), rather than
+committing to the locally highest individual value.
+Conclusion: weighted interval DP returns 160 and defeats this counterexample.
